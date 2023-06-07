@@ -1,0 +1,53 @@
+from direct.showbase.ShowBase import ShowBase
+from panda3d.core import Vec3
+from panda3d.core import CollisionTraverser, CollisionHandlerQueue, CollisionNode
+from panda3d.core import CollisionRay
+
+class Game(ShowBase):
+    def __init__(self):
+        ShowBase.__init__(self)
+        
+        # Load the car model and place it in the scene
+        self.car = self.loader.loadModel("car_model.obj")
+        self.car.reparentTo(self.render)
+        self.car.setPos(0, 0, 0)
+        
+        # Set up the camera
+        self.camera.setPos(0, -20, 5)
+        
+        # Set up the collision detection
+        self.collision_traverser = CollisionTraverser()
+        self.collision_handler = CollisionHandlerQueue()
+        self.collision_ray = CollisionRay()
+        self.collision_ray.setOrigin(0, 0, 0)
+        self.collision_ray.setDirection(0, 1, 0)
+        self.collision_node = CollisionNode("car_collision")
+        self.collision_node.addSolid(self.collision_ray)
+        self.collision_node_path = self.car.attachNewNode(self.collision_node)
+        self.collision_traverser.addCollider(self.collision_node_path, self.collision_handler)
+        
+        # Set up the movement controls
+        self.accept("arrow_left", self.rotate_car, [1])
+        self.accept("arrow_right", self.rotate_car, [-1])
+        self.accept("arrow_up", self.move_car, [1])
+        self.accept("arrow_down", self.move_car, [-1])
+        self.accept("space", self.reset_car)
+        
+    def rotate_car(self, direction):
+        self.car.setH(self.car.getH() + direction * 10)
+        
+    def move_car(self, direction):
+        speed = 0.1
+        self.car.setPos(self.car.getPos() + self.car.getQuat().getForward() * speed * direction)
+        
+        # Check for collisions
+        self.collision_traverser.traverse(self.render)
+        if self.collision_handler.getNumEntries() > 0:
+            self.car.setPos(self.car.getPos() - self.car.getQuat().getForward() * speed * direction)
+        
+    def reset_car(self):
+        self.car.setPos(0, 0, 0)
+        self.car.setH(0)
+
+game = Game()
+game.run()
